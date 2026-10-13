@@ -1,0 +1,37 @@
+# Personal baseline. configure.py changes only these managed settings.
+# Model access and supported effort depend on the installed client/account.
+model = "gpt-6-astra"
+model_reasoning_effort = "ultra"
+plan_mode_reasoning_effort = "ultra"
+approval_policy = "on-request"
+sandbox_mode = "workspace-write"
+web_search = "live"
+cli_auth_credentials_store = "keyring"
+
+[windows]
+# Preferred legacy implementation; Codex handles any required UAC setup.
+sandbox = "elevated"
+
+[sandbox_workspace_write]
+network_access = false
+
+[features]
+memories = true
+multi_agent = true
+remote_plugin = true
+shell_snapshot = true
+unified_exec = true
+
+[agents]
+enabled = true
+max_concurrent_threads_per_session = 4
+
+[memories]
+generate_memories = true
+use_memories = true
+
+[mcp_servers.openaiDeveloperDocs]
+url = "https://developers.openai.com/mcp"
+enabled = true
+startup_timeout_sec = 30
+tool_timeout_sec = 90
