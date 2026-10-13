@@ -47,6 +47,54 @@ try {
     )
     Assert-Condition ($parseErrors.Count -eq 0) "Syntax: $($file.Name)"
   }
+  # Exercise discovery alone, without running setup or installing anything.
+  $launcherAst = [System.Management.Automation.Language.Parser]::ParseFile(
+    $launcher, [ref]$null, [ref]$null
+  )
+  $pythonFunction = $launcherAst.Find({
+    param($node)
+    $node -is [System.Management.Automation.Language.FunctionDefinitionAst] `
+      -and $node.Name -eq 'Find-PythonCommand'
+  }, $true)
+  & {
+    . ([scriptblock]::Create($pythonFunction.Extent.Text))
+    $oldPython = Join-Path $temporary 'old-python.ps1'
+    $workingPython = Join-Path $temporary 'working-python.ps1'
+    Set-Content -LiteralPath $oldPython -Value '$global:LASTEXITCODE = 1'
+    Set-Content -LiteralPath $workingPython -Value '$global:LASTEXITCODE = 0'
+    $pythonName = 'python'
+    $pythonResults = @(
+      [pscustomobject]@{ Source = 'C:/WindowsApps/python.exe' },
+      [pscustomobject]@{ Source = $oldPython },
+      [pscustomobject]@{ Source = $workingPython }
+    )
+    function Get-Command {
+      [CmdletBinding()]
+      param([string]$Name, [object]$CommandType, [switch]$All)
+      if ($Name -eq $pythonName) { return $pythonResults }
+    }
+    $selected = Find-PythonCommand -IgnoreVenv
+    Assert-Condition ($selected.Command -eq $workingPython) `
+      'Multiple Python paths are probed separately; Store shortcut is skipped'
+    $pythonResults = @(
+      [pscustomobject]@{ Source = $workingPython },
+      [pscustomobject]@{ Source = $oldPython }
+    )
+    $selected = Find-PythonCommand -IgnoreVenv
+    Assert-Condition ($selected.Command -eq $workingPython `
+      -and -not $selected.Prefix) `
+      'First usable PATH Python wins without a pinned version'
+    $pythonName = 'py'
+    $selected = Find-PythonCommand -IgnoreVenv
+    Assert-Condition ($selected.Prefix -eq '-3') `
+      'Windows launcher remains a fallback'
+    $pythonResults = @()
+    $rejected = $false
+    try { $null = Find-PythonCommand -IgnoreVenv } catch {
+      $rejected = $_.Exception.Message -match 'Python 3.11\+ was not found'
+    }
+    Assert-Condition $rejected 'Missing usable Python reports a clear error'
+  }
   $result = Invoke-Launcher @('-Help')
   Assert-Condition ($result.Code -eq 0 -and $result.Text -match 'Usage:') 'Help'
   $result = Invoke-Launcher @('-Bootstrap')

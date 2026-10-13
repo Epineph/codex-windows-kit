@@ -75,6 +75,43 @@ pwsh -NoProfile -File .\setup-codex-windows.ps1 `
 Offline previews cannot apply or generate completion. With `-Effort auto`, an
 offline preview explicitly falls back to `xhigh`.
 
+## Python and micromamba environments
+
+In PowerShell, `python` follows `PATH`: micromamba activation puts the active
+environment first. Use `python` and `python -m pip` inside that environment.
+The kit's private `.venv` runs its configuration helper when present; it does
+not set your shell's Python default. Otherwise the helper checks each Python
+application on `PATH` separately before trying the Windows `py -3` launcher.
+
+If activation says the prefix does not exist, compare `micromamba env list`
+with `$env:MAMBA_ROOT_PREFIX`. The profile's root must be the directory that
+contains `envs`, rather than an individual environment or `python.exe`.
+You can activate a listed environment by its full path immediately:
+
+```powershell
+micromamba env list
+micromamba activate 'C:\path\to\mamba\envs\your-environment'
+python -c 'import sys; print(sys.executable)'
+```
+
+For a lasting correction, set the actual root in your existing micromamba
+profile block, then restart PowerShell. Initialize the hook once per session;
+loading it again can fail because `MambaPromptBackup` already exists.
+See the [micromamba PowerShell instructions][micromamba].
+
+Some Windows environments provide `python.exe` without `python3.exe`. To make
+`python3` follow whichever `python` is currently on `PATH`, add this alias to
+your PowerShell profile:
+
+```powershell
+Set-Alias -Name python3 -Value python
+```
+
+If Python opens the Store, disable the **App Installer** entries for
+`python.exe` and `python3.exe` in Start > **Manage app execution aliases**.
+This removes the Store shortcuts; environment activation still selects the
+interpreter. See [Microsoft's explanation][python-aliases].
+
 ## Sign in and inspect the effective settings
 
 Open a new terminal, then start Codex from your project directory:
@@ -238,3 +275,5 @@ Installation uses the [official Windows CLI installer][cli].
 [windows]: https://learn.chatgpt.com/docs/windows/windows-sandbox
 [config]: https://learn.chatgpt.com/docs/config-file/config-reference
 [cli]: https://learn.chatgpt.com/docs/codex/cli
+[micromamba]: https://mamba.readthedocs.io/en/latest/installation/micromamba-installation.html#windows
+[python-aliases]: https://learn.microsoft.com/en-us/windows/dev-environment/python#frequently-asked-questions

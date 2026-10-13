@@ -145,11 +145,13 @@ function Find-PythonCommand {
   }
   # Prefer the active environment/PATH interpreter before the Windows launcher.
   foreach ($name in @('python', 'python3', 'py')) {
-    $found = Get-Command $name -CommandType Application `
+    $found = Get-Command $name -CommandType Application -All `
       -ErrorAction SilentlyContinue
-    if ($found -and $found.Source -notmatch 'WindowsApps[\\/]python') {
-      $prefix = if ($name -eq 'py') { @('-3') } else { @() }
-      $candidates.Add(@{ Command = $found.Source; Prefix = $prefix })
+    foreach ($application in $found) {
+      if ($application.Source -notmatch 'WindowsApps[\\/]python') {
+        $prefix = if ($name -eq 'py') { @('-3') } else { @() }
+        $candidates.Add(@{ Command = $application.Source; Prefix = $prefix })
+      }
     }
   }
   foreach ($candidate in $candidates) {
